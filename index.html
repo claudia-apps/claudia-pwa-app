@@ -185,12 +185,50 @@ async function enableAdminNotifications() { if (!window.adminPush || typeof wind
 async function disableAdminNotifications() { if (!window.adminPush || typeof window.adminPush.disableCurrentDeviceNotifications !== 'function') { return; } try { await window.adminPush.disableCurrentDeviceNotifications(); setNotificationStatusUi('Inactiv', 'Notificările au fost dezactivate pentru acest dispozitiv.', false); alert('Notificările au fost dezactivate pentru acest dispozitiv.'); } catch (error) { console.error('Eroare dezactivare notificări:', error); alert(error.message || 'Nu am putut dezactiva notificările.'); } }
 async function testAdminNotification() { if (!window.adminPush || typeof window.adminPush.sendTestNotification !== 'function') { return; } try { await window.adminPush.sendTestNotification(); setNotificationStatusUi('Activ', 'A fost trimisă o notificare de test pe acest dispozitiv.', true); } catch (error) { console.error('Eroare notificare test:', error); alert(error.message || 'Nu am putut trimite notificarea de test.'); } }
 if (enableNotificationsBtn) enableNotificationsBtn.addEventListener('click', enableAdminNotifications); if (disableNotificationsBtn) disableNotificationsBtn.addEventListener('click', disableAdminNotifications); if (testNotificationBtn) testNotificationBtn.addEventListener('click', testAdminNotification); window.addEventListener('adminpushready', refreshNotificationUi);
-sendWhatsappBtn.addEventListener('click', sendToWhatsApp); copyWhatsappBtn.addEventListener('click', copyWhatsappMessage); if (agendaSearch) { agendaSearch.addEventListener('input', renderBookingAgenda); } if (agendaFilterDate) { agendaFilterDate.addEventListener('change', renderBookingAgenda); } if (agendaSort) { agendaSort.addEventListener('change', renderBookingAgenda); } if (clearAllBookingsBtn) { clearAllBookingsBtn.addEventListener('click', async () => { await clearAllBookings(); renderBookingAgenda(); renderNextReminder(); renderTimeSlots(); if (settingsPage.classList.contains('active')) populateSettingsPage(); }); } window.addEventListener('pageshow', () => { cleanupExpiredBookings(); refreshUiIfChanged(); }); window.addEventListener('focus', () => { cleanupExpiredBookings(); refreshUiIfChanged(); }); document.addEventListener('visibilitychange', () => { if (!document.hidden) { cleanupExpiredBookings(); refreshUiIfChanged(); } }); renderDynamicCalendar(); populateSettingsPage(); cleanupExpiredBookings(); updateAdminButtonUI(); updateSummary(); renderTimeSlots(); showStep(0); updateInstallUI(); refreshNotificationUi(); lastUiRefreshSignature = getUiRefreshSignature(); setInterval(() => { cleanupExpiredBookings(); refreshUiIfChanged(); }, 30000); </script> <script> if ("serviceWorker" in navigator) { window.addEventListener("load", () => { navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' })
+sendWhatsappBtn.addEventListener('click', sendToWhatsApp); copyWhatsappBtn.addEventListener('click', copyWhatsappMessage); if (agendaSearch) { agendaSearch.addEventListener('input', renderBookingAgenda); } if (agendaFilterDate) { agendaFilterDate.addEventListener('change', renderBookingAgenda); } if (agendaSort) { agendaSort.addEventListener('change', renderBookingAgenda); } if (clearAllBookingsBtn) { clearAllBookingsBtn.addEventListener('click', async () => { await clearAllBookings(); renderBookingAgenda(); renderNextReminder(); renderTimeSlots(); if (settingsPage.classList.contains('active')) populateSettingsPage(); }); } window.addEventListener('pageshow', () => { cleanupExpiredBookings(); refreshUiIfChanged(); }); window.addEventListener('focus', () => { cleanupExpiredBookings(); refreshUiIfChanged(); }); document.addEventListener('visibilitychange', () => { if (!document.hidden) { cleanupExpiredBookings(); refreshUiIfChanged(); } }); renderDynamicCalendar(); populateSettingsPage(); cleanupExpiredBookings(); updateAdminButtonUI(); updateSummary(); renderTimeSlots(); showStep(0); updateInstallUI(); refreshNotificationUi(); lastUiRefreshSignature = getUiRefreshSignature(); setInterval(() => { cleanupExpiredBookings(); refreshUiIfChanged(); }, 30000); </script> <script>
+if ("serviceWorker" in navigator) {
+  let swRefreshing = false;
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (swRefreshing) return;
+    swRefreshing = true;
+    window.location.reload();
+  });
+
+  function activateWorker(worker) {
+    if (!worker) return;
+    worker.postMessage({ type: "SKIP_WAITING" });
+  }
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" })
       .then((registration) => {
-        console.log('Service Worker înregistrat', registration.scope);
-        if (typeof registration.update === 'function') registration.update();
+        console.log("Service Worker înregistrat", registration.scope);
+
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          activateWorker(registration.waiting);
+        }
+
+        registration.addEventListener("updatefound", () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              activateWorker(newWorker);
+            }
+          });
+        });
+
+        if (typeof registration.update === "function") {
+          registration.update();
+          setInterval(() => registration.update(), 60 * 1000);
+        }
       })
-      .catch((err) => console.log('Eroare SW:', err)); }); } </script> <script type="module">
+      .catch((err) => console.log("Eroare SW:", err));
+  });
+}
+</script> <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, getDocs, onSnapshot, runTransaction, doc, setDoc, deleteDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getMessaging, getToken, deleteToken, isSupported, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";

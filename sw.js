@@ -13,9 +13,17 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-const CACHE_VERSION = 'claudia-pwa-v5';
+const CACHE_VERSION = 'claudia-pwa-v7';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-app-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
+
+self.addEventListener('message', (event) => {
+  const action = event?.data?.type || event?.data?.action;
+  if (action === 'SKIP_WAITING' || action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
+
 const APP_SHELL_ASSETS = [
   './',
   './index.html',
@@ -124,4 +132,3 @@ self.addEventListener('notificationclick', (event) => {
     await self.clients.openWindow(resolvedTargetUrl);
   })());
 });
-
